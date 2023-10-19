@@ -1,9 +1,9 @@
 #Quality control (FastQC (fastqc/0.11.5) and MultiQC (python/3.6.3))
-fastqc input_directory_path/Input_sample_file.fq.gz -o /output_directory_path/Fastqc_files --no extract              \
-multiqc /output_directory_path/Fastqc_files/
+fastqc input_directory_path/Input_sample_file.fq.gz -o /output_directory_path/Fastqc_files --no extract              
+multiqc /output_directory_path/Fastqc_files
 # Download and view quality report
 
-#Concatenate all forward reads(_1) together and all the reverse reads (_2) together\
+#Concatenate all forward reads(_1) together and all the reverse reads (_2) together
 cat Input_sample_file1_1.fq.gz Input_sample_file2_1.fq.gz > Sample_combined_forward_1.fq.gz
 cat Input_sample_file1_2.fq.gz Input_sample_file2_2.fq.gz > Sample_combined_reverse_2.fq.gz
 
