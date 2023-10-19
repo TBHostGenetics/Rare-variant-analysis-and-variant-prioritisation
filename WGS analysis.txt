@@ -1,0 +1,67 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2757
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 # Quality control (FastQC (fastqc/0.11.5) and MultiQC (python/3.6.3))\
+fastqc input_directory_path/Input_sample_file.fq.gz -o /output_directory_path/Fastqc_files --no extract              \
+multiqc /output_directory_path/Fastqc_files\
+# Download and view quality report\
+\
+#Concatenate all forward reads(_1) together and all the reverse reads (_2) together\
+cat Input_sample_file1_1.fq.gz Input_sample_file2_1.fq.gz > Sample_combined_forward_1.fq.gz\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 cat Input_sample_file1_2.fq.gz Input_sample_file2_2.fq.gz > Sample_combined_reverse_2.fq.gz\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+#Download GRCh38 \
+\
+\
+#Create and index the reference (bwa/0.7.17)\
+bwa index -a bwtsw -p hg38idx hg38.fa\
+\
+#Align each sample to the reference using BWA-MEM (bwa/0.7.17)\
+bwa mem -M -t 24 hg38idx Sample_combined_forward_1.fq.gz Sample_combined_reverse_2.fq.gz > Sample_#.sam\
+\
+#Convert .sam to .bam (samtools/1.10)\
+samtools view -bS Sample_#.sam > Sample_#.bam\
+\
+#Validate the .bam file to ensure there are no errors (picard/2.20.3)\
+picard ValidateSamFile I=Sample_#.bam MODE=SUMMARY\
+\
+#If ReadGroups are missing add or replace (picard/2.20.3)\
+picard AddOrReplaceReadGroups I=Sample_#.bam O=Sample_#_RG_added.bam RGID=1 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM=20\
+\
+#Sort .bam file (samtools/1.10)\
+samtools sort -O bam -o Sample_#_sorted.bam -T temp Sample_#_RG_added.bam\
+\
+#Index .bam file  (samtools/1.10)\
+samtools index Sample_#_sorted.bam\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 #Validate the .bam file again to ensure there are no errors (picard/2.20.3)\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 picard ValidateSamFile I=Sample_#_sorted.bam MODE=SUMMARY\
+\
+#Create human reference dictionary (picard/2.20.3)\
+picard CreateSequenceDictionary R=hg38.fa O=hg38.dict\
+\
+#Create .fai file for the reference (samtools/1.10)\
+samtools faidx hg38.fa\
+\
+#Variant calling using HaplotypeCaller (gatk/4.0.6.0)\
+gatk HaplotypeCaller -I=Sample_#_sorted.bam -R=hg38.fa --native-pair-hmm-threads 24 -O=Sample_#_raw.vcf\
+\
+##Hard filters (gatk/4.0.6.0)\
+#VQSR hard filter for SNPs \
+gatk SelectVariants -V Sample_#_raw.vcf -R hg38.fa -select-type SNP -O Sample_#_SNPS_raw.vcf\
+gatk VariantFiltration -R hg38.fa -V Sample_#_SNPS_raw.vcf -O Sample_#_SNPS_final.vcf --filter "QD < 2.0" --filter-name "QD2" --filter "QUAL < 30.0" --filter-name "QUAL30" --filter "SOR > 3.0" --filter-name "SOR3" --filter "FS > 60.0" --filter-name "FS60" --filter "MQ < 40.0" --filter-name "MQ40" --filter "MQRankSum < -12.5" --filter-name "MQRankSum-12.5" --filter "ReadPosRankSum < -8.0" --filter-name "ReadPosRankSum-8"\
+\
+#VQSR hard filter for INDELs\
+gatk SelectVariants -V Sample_#_raw.vcf -R hg38.fa -select-type INDEL -O Sample_#_INDELs_raw.vcf\
+gatk VariantFiltration -V Sample_#_INDELs_raw.vcf -R hg38.fa -O Sample_#_INDELs_final.vcf --filter "QD < 2.0" --filter-name "QD2" --filter "QUAL < 30.0" --filter-name "QUAL30" --filter "FS > 200.0" --filter-name "FS200" --filter "ReadPosRankSum < -20.0" --filter-name "ReadPosRankSum-20"\
+\
+#Merge the filtered SNP and INDEL files (picard/2.20.3)\
+picard MergeVcfs I=Sample_#_SNPS_final.vcf I=Sample_#_INDELs_final.vcf O=Sample_#.vcf}
