@@ -1,6 +1,6 @@
 # Rare-variant-analysis-and-variant-prioritisation 
 
-### Software needed 
+**Software needed** 
 1) fastqc/0.11.5
 2) python/3.6.3
 3) bwa/0.7.17
