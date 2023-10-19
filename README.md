@@ -1,5 +1,7 @@
 # Rare-variant-analysis-and-variant-prioritisation 
 
+## WGS rare variant analysis: .fastq to .vcf
+
 **Software needed** 
 1) fastqc/0.11.5
 2) python/3.6.3
@@ -7,5 +9,3 @@
 4) samtools/1.10
 5) picard/2.20.3
 6) gatk/4.0.6.0
-7) annovar
-8) mysql
